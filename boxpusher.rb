@@ -21,15 +21,15 @@ OptionParser.new do |opts|
   end
 
   opts.on('-b b', '--box b', 'The name of the box') do |b|
-    options[:boxname] = b
+    options[:boxnames] = b
   end
 
-  opts.on('-f f', '--file', 'The file to upload') do |f|
-    options[:filepath] = f
+  opts.on('-f f', '--files f', 'The directory containing one or more .box files') do |f|
+    options[:filepath] = f.sub(/\/$/, '')
   end
 
   opts.on('-p p', '--provider p', 'The provider. Defaults to virtualbox') do |p|
-    options[:provier] = p
+    options[:provider] = p
   end
 
   opts.on('--test', 'Run in test mode') do |test|
@@ -56,30 +56,36 @@ if options[:description].nil? || options[:description].strip.empty?
   raise('You must provide a description.')
 end
 
-if options[:boxname].nil? || options[:boxname].strip.empty?
+if options[:boxnames].nil? || options[:boxnames].strip.empty?
   raise('You must provide a name for this box.')
+else
+  options[:boxnames] = options[:boxnames].split(',')
 end
 
-if options[:filepath].nil? || options[:filepath].strip.empty? || !File.exists?(options[:filepath])
+if options[:filepath].nil? || options[:filepath].strip.empty? || !Dir.exists?(options[:filepath])
   raise('You must provide the path to an existing file')
 end
 
 if options[:provider].nil? || options[:provider].strip.empty?
-  #raise('You must specify the provider')
   options[:provider] = 'virtualbox'
 end
 
 # Stop here if in test mode.
 if options[:test]
-  puts "User: #{options[:username]}"
-  puts "Version: #{options[:version]}"
+  puts "User:        #{options[:username]}"
+  puts "Version:     #{options[:version]}"
   puts "Description: #{options[:description]}"
-  puts "Box: #{options[:boxname]}"
-  puts "Provider: #{options[:provider]}"
-  puts "As a result, this would have uploaded version #{options[:version]} of
-        #{options[:username]}/#{options[:boxname]} for #{options[:provider]}"
+  puts "File Path:   #{options[:filepath]}"
+  puts "Boxes:       #{options[:boxnames]}"
+  puts "Provider:    #{options[:provider]}"
   exit
 end
+
+##################################################################################
+#
+#         Program logic starts here
+#
+##################################################################################
 
 # first, login with the token from Atlas
 Atlas.configure do |config|
@@ -89,25 +95,36 @@ end
 # then you can load in users (creating, updating, etc isn't supported by Atlas)
 Atlas::User.find(options[:username])
 
-box = Atlas::Box.find("#{options[:username]}/#{options[:boxname]}")
+options[:boxnames].each do |boxname|
+  puts "Processing #{options[:boxname]}..."
 
-# creating a new version
-version = box.create_version(version: options[:version],
-                             description: options[:description])
+  box = Atlas::Box.find("#{options[:username]}/#{options[:boxname]}")
 
-# add a provider to that version
-provider = version.create_provider(name: options[:provider])
+  # creating a new version
+  version = box.create_version(version: options[:version],
+                               description: options[:description])
 
-# upload a file for the version
-file = File.open(options[:filepath])
-progress_bar = ProgressBar.create(total: file.size)
+  # add a provider to that version
+  provider = version.create_provider(name: options[:provider])
 
-provider.upload(file) do |progress, size|
-  diff = size - progress
-  progress_bar.progress += diff if diff < size
+  # upload a file for the version
+  boxpath = "#{options[:filepath]}/#{options[:boxname]}-#{options[:provider]}.box"
+
+  if File.exist?(boxpath)
+    file = File.open(boxpath)
+    progress_bar = ProgressBar.create(total: file.size)
+
+    provider.upload(file) do |progress, size|
+      diff = size - progress
+      progress_bar.progress += diff if diff < size
+    end
+
+    progress_bar.finish
+  else
+    raise("Unable to fine #{boxpath}")
+  end
+
+  # set the version to be released
+  version.release || raise("Failed to release #{options[:username]}/#{options[:boxname]} v#{options[:version]}")
+  puts "#{options[:username]}/#{options[:boxname]} v#{options[:version]} has been released."
 end
-
-progress_bar.finish
-
-# set the version to be released
-version.release
