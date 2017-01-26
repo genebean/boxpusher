@@ -2,7 +2,6 @@
 
 require 'atlas'
 require 'optparse'
-require 'ruby-progressbar'
 
 options = {}
 OptionParser.new do |opts|
@@ -111,15 +110,7 @@ options[:boxnames].each do |boxname|
   boxpath = "#{options[:filepath]}/#{boxname}-#{options[:provider]}.box"
 
   if File.exist?(boxpath)
-    file = File.open(boxpath)
-    progress_bar = ProgressBar.create(total: file.size)
-
-    provider.upload(file) do |progress, size|
-      diff = size - progress
-      progress_bar.progress += diff if diff < size
-    end
-
-    progress_bar.finish
+    provider.upload(File.open(boxpath))
   else
     raise("Unable to fine #{boxpath}")
   end

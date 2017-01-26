@@ -4,14 +4,12 @@ GEM
     atlas (1.5.0)
       excon (~> 0.45)
     excon (0.54.0)
-    ruby-progressbar (1.8.1)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
   atlas (~> 1.5.0)
-  ruby-progressbar (~> 1.8.0)
 
 BUNDLED WITH
    1.14.1
