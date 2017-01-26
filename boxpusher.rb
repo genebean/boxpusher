@@ -96,9 +96,9 @@ end
 Atlas::User.find(options[:username])
 
 options[:boxnames].each do |boxname|
-  puts "Processing #{options[:boxname]}..."
+  puts "Processing #{boxname}..."
 
-  box = Atlas::Box.find("#{options[:username]}/#{options[:boxname]}")
+  box = Atlas::Box.find("#{options[:username]}/#{boxname}")
 
   # creating a new version
   version = box.create_version(version: options[:version],
@@ -108,7 +108,7 @@ options[:boxnames].each do |boxname|
   provider = version.create_provider(name: options[:provider])
 
   # upload a file for the version
-  boxpath = "#{options[:filepath]}/#{options[:boxname]}-#{options[:provider]}.box"
+  boxpath = "#{options[:filepath]}/#{boxname}-#{options[:provider]}.box"
 
   if File.exist?(boxpath)
     file = File.open(boxpath)
@@ -125,6 +125,6 @@ options[:boxnames].each do |boxname|
   end
 
   # set the version to be released
-  version.release || raise("Failed to release #{options[:username]}/#{options[:boxname]} v#{options[:version]}")
-  puts "#{options[:username]}/#{options[:boxname]} v#{options[:version]} has been released."
+  version.release || raise("Failed to release #{options[:username]}/#{boxname} v#{options[:version]}")
+  puts "#{options[:username]}/#{boxname} v#{options[:version]} has been released."
 end
